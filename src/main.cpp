@@ -1,6 +1,9 @@
 #include "../include/glad/glad.h"
 #include "../include/shader.hpp"
 #include "../include/stb/stb_image.h"
+#include "../include/glm/glm.hpp"
+#include "../include/glm/gtc/matrix_transform.hpp"
+#include "../include/glm/gtc/type_ptr.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
@@ -8,6 +11,7 @@
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_stdinc.h>
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -162,9 +166,16 @@ int main(int argc, char *argv[]) {
 
         // bind Texture
         glBindTexture(GL_TEXTURE_2D, texture);
+        // create transformations
+        const double now = ((double)SDL_GetTicks()) / 1000.0;
+        glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+        transform = glm::rotate(transform, (float)now, glm::vec3(0.0f, 0.0f, 1.0f));    
 
-        // Draw
         Defaultshader.use();
+        unsigned int transformLoc = glGetUniformLocation(Defaultshader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+        // Draw
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         // Swap buffers
