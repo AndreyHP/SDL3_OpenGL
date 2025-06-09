@@ -1,6 +1,6 @@
 # Variables
-MAIN = clear.cpp
-TARGET = clear
+MAIN = $(wildcard ./src/*cpp) ./src/*.c
+TARGET = main
 OUTDIR = debug
 INCLUDE = -I:./include
 CXX = g++
