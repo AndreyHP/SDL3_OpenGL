@@ -1,1 +1,1 @@
-# SDL3_Template
+# SDL3_OpenGL
