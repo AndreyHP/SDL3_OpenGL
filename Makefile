@@ -4,7 +4,7 @@ TARGET = main
 OUTDIR = debug
 INCLUDE = -I:./include
 CXX = g++
-CXXFLAGS = -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion -O2 -pedantic-errors
+CXXFLAGS = -std=c++23  -Wall -Wextra -Weffc++ -pedantic-errors -O0
 LINKER = -lGL -lX11 -lpthread -lXrandr -lXi  -l:libSDL3.a
 
 # Add -ggdb to the command line for debug builds and -O2 -DNDEBUG
