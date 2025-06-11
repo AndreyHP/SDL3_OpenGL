@@ -12,6 +12,7 @@
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_video.h>
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -19,13 +20,18 @@ static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
 
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1280;
+const unsigned int SCR_HEIGHT = 720;
 
 bool wireframe = false;
+bool quit = false;
 Shader Defaultshader;
 int width, height, nrChannels;
+int w, h;
+float fov{45.0f};
+float Zdistance{-5.0f};
 
+void processEvents(SDL_Event *event);
 
 int main(int argc, char *argv[]) {
     // Set application metadata
@@ -71,6 +77,9 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
+    SDL_GetWindowSize(window, &w, &h);
+    glViewport(0, 0, w, h);
 
     // Compile shaders
     Defaultshader.compile("./glsl/shader.vs", "./glsl/shader.fs");
@@ -211,21 +220,12 @@ int main(int argc, char *argv[]) {
     Defaultshader.setInt("texture1", 0);
     Defaultshader.setInt("texture2", 1);
 
-
+    
     // Main loop
-    bool quit = false;
     SDL_Event event;
     while (!quit) {
-        // Process events
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_SCANCODE_ESCAPE) {
-                quit = true;
-            }
-            // Handle "W" key press to toggle wireframe mode
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.scancode == SDL_SCANCODE_D) {
-                wireframe = !wireframe;
-            }
-        }
+       
+        processEvents(&event);
 
         // Render
         glClearColor(0.5f, 0.6f, 0.6f, 1.0f);
@@ -253,8 +253,8 @@ int main(int argc, char *argv[]) {
         glm::mat4 view          = glm::mat4(1.0f);
         glm::mat4 projection    = glm::mat4(1.0f);
         
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, Zdistance));
+        projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         
         // retrieve the matrix uniform locations
         unsigned int modelLoc = glGetUniformLocation(Defaultshader.ID, "model");
@@ -296,3 +296,35 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+void processEvents(SDL_Event *event){
+        
+    while (SDL_PollEvent(event)) {
+            if (event->type == SDL_EVENT_QUIT || event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
+                quit = true;
+            }
+
+            if (event->type == SDL_EVENT_WINDOW_RESIZED) {
+                SDL_GetWindowSize(window, &w, &h);
+                glViewport(0, 0, w, h); 
+            }
+
+            // Handle "W" key press to toggle wireframe mode
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
+                wireframe = !wireframe;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
+                fov++;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_V) {
+                fov--;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_UP) {
+                Zdistance++;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_DOWN) {
+                Zdistance--;
+            }
+        }
+
+};
