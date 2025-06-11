@@ -30,6 +30,8 @@ int width, height, nrChannels;
 int w, h;
 float fov{45.0f};
 float Zdistance{-5.0f};
+float avgFPS = 0.0f;
+float deltaTime = 0.0f;
 
 void processEvents(SDL_Event *event);
 
@@ -77,6 +79,11 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
+    // Variables for FPS calculation
+    Uint32 frameCount = 0;
+    Uint32 startTime = SDL_GetTicks();
+    Uint32 previousFrameTime = startTime; // Initialize with start time
 
     SDL_GetWindowSize(window, &w, &h);
     glViewport(0, 0, w, h);
@@ -243,6 +250,23 @@ int main(int argc, char *argv[]) {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
         
+        
+        frameCount++;
+
+        // Calculate FPS every second
+        Uint32 currentTime = SDL_GetTicks();
+        if (currentTime - startTime >= 1000) { // Update every 1 second
+            avgFPS = frameCount / ((currentTime - startTime) / 1000.0f);
+            std::cout << "Average FPS: " << avgFPS << '\n';
+            std::cout << "Delta: " << deltaTime << '\n';
+            frameCount = 0; // Reset frame count
+            startTime = currentTime; // Reset timer
+        }
+        
+        // Calculate delta time
+        deltaTime = (currentTime - previousFrameTime) / 1000.0f; // Convert to seconds
+        previousFrameTime = currentTime; // Update previous frame time
+
         // activate shader
         Defaultshader.use();
         // create transformations
@@ -299,6 +323,8 @@ int main(int argc, char *argv[]) {
 
 void processEvents(SDL_Event *event){
         
+    const double delta = deltaTime;
+    
     while (SDL_PollEvent(event)) {
             if (event->type == SDL_EVENT_QUIT || event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
                 quit = true;
@@ -320,10 +346,10 @@ void processEvents(SDL_Event *event){
                 fov--;
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_UP) {
-                Zdistance++;
+                Zdistance+= 3.5f * delta;
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_DOWN) {
-                Zdistance--;
+                Zdistance-= 3.5f * delta;
             }
         }
 
