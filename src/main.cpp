@@ -23,6 +23,9 @@ static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
+const int TARGET_FPS = 60;
+const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
+
 bool wireframe = false;
 bool quit = false;
 Shader Defaultshader;
@@ -231,7 +234,7 @@ int main(int argc, char *argv[]) {
     // Main loop
     SDL_Event event;
     while (!quit) {
-       
+       Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
         processEvents(&event);
 
         // Render
@@ -262,10 +265,17 @@ int main(int argc, char *argv[]) {
             frameCount = 0; // Reset frame count
             startTime = currentTime; // Reset timer
         }
+
         
         // Calculate delta time
         deltaTime = (currentTime - previousFrameTime) / 1000.0f; // Convert to seconds
         previousFrameTime = currentTime; // Update previous frame time
+
+        Uint32 frameTime = SDL_GetTicks() - frameStart; // Time taken for the current frame
+        if (frameTime < FRAME_TIME){
+           //std::cout << FRAME_TIME - deltaTime;
+            SDL_Delay(FRAME_TIME - frameTime);
+        }
 
         // activate shader
         Defaultshader.use();
