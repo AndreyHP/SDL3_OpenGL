@@ -13,6 +13,10 @@
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_video.h>
+#include "../include/imgui/imgui.h"
+#include "../include/imgui/backends/imgui_impl_sdl3.h"
+#include "../include/imgui/backends/imgui_impl_opengl3.h"
+
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window *window = NULL;
@@ -39,6 +43,8 @@ float deltaTime = 0.0f;
 void processEvents(SDL_Event *event);
 
 int main(int argc, char *argv[]) {
+
+
     // Set application metadata
     SDL_SetAppMetadata("Example Renderer", "1.0", "com.example.renderer");
 
@@ -48,6 +54,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    const char* glsl_version = "#version 130";
     // Set OpenGL attributes
     if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) ||
         !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) ||
@@ -56,6 +63,14 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
+    
+    // Create window with graphics context
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+
 
     // Create window
     window = SDL_CreateWindow("Example", SCR_WIDTH, SCR_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
@@ -73,6 +88,48 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
+    SDL_GL_MakeCurrent(window, glContext);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+     // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL3_InitForOpenGL(window, glContext);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+
+     // Setup scaling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+    io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+    io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+
+     // Our state
+    //bool show_demo_window = true;
+    //bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
 
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
@@ -237,8 +294,22 @@ int main(int argc, char *argv[]) {
        Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
         processEvents(&event);
 
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::SliderFloat("CameraZ", &Zdistance, -50.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
+
+       
         // Render
-        glClearColor(0.5f, 0.6f, 0.6f, 1.0f);
+        glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (wireframe) {
@@ -316,12 +387,31 @@ int main(int argc, char *argv[]) {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
         
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+         
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
+            SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
+        }
+
+
         // Swap buffers
         SDL_GL_SwapWindow(window);
 
     }
 
     // Cleanup
+    
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     SDL_GL_DestroyContext(glContext);
@@ -336,6 +426,8 @@ void processEvents(SDL_Event *event){
     const double delta = deltaTime;
     
     while (SDL_PollEvent(event)) {
+           ImGui_ImplSDL3_ProcessEvent(event);
+            
             if (event->type == SDL_EVENT_QUIT || event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
                 quit = true;
             }

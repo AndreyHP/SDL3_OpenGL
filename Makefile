@@ -1,8 +1,10 @@
 # Variables
-MAIN = $(wildcard ./src/*cpp) ./src/*.c
+IMGUI_DIR = ./include/imgui
+MAIN += $(wildcard ./src/*cpp) $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp ./src/*.c
+MAIN += $(IMGUI_DIR)/backends/imgui_impl_sdl3.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 TARGET = main
 OUTDIR = debug
-INCLUDE = -I:./include
+INCLUDE = -I:./include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXX = g++
 CXXFLAGS = -std=c++23  -Wall -Wextra -Weffc++ -pedantic-errors -O0
 LINKER = -lGL -lX11 -lpthread -lXrandr -lXi  -l:libSDL3.a
