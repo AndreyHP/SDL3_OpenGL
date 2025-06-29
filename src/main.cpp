@@ -8,6 +8,7 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_scancode.h>
@@ -48,12 +49,17 @@ glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
 glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-//glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
-//glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
+float yaw   = -90.0f;
+float pitch =  0.0f;
+float lastX =  800.0f / 2.0;
+float lastY =  600.0 / 2.0;
 
+
+void mouse_callback(double xpos, double ypos);
+void scroll_callback(double xoffset, double yoffset);
 void processEvents(SDL_Event *event);
 
 int main(int argc, char *argv[]) {
@@ -93,6 +99,7 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
 
     // Create OpenGL context
     glContext = SDL_GL_CreateContext(window);
@@ -351,8 +358,8 @@ int main(int argc, char *argv[]) {
         Uint32 currentTime = SDL_GetTicks();
         if (currentTime - startTime >= 1000) { // Update every 1 second
             avgFPS = frameCount / ((currentTime - startTime) / 1000.0f);
-            std::cout << "Average FPS: " << avgFPS << '\n';
-            std::cout << "Delta: " << deltaTime << '\n';
+            //std::cout << "Average FPS: " << avgFPS << '\n';
+            //std::cout << "Delta: " << deltaTime << '\n';
             frameCount = 0; // Reset frame count
             startTime = currentTime; // Reset timer
         }
@@ -461,6 +468,10 @@ void processEvents(SDL_Event *event){
                 glViewport(0, 0, w, h); 
             }
 
+            if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
+                mouse_callback(event->motion.x, event->motion.y);
+            }
+
             const float cameraSpeed = 2.5f * delta;
             // Handle "W" key press to toggle wireframe mode
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
@@ -482,3 +493,64 @@ void processEvents(SDL_Event *event){
         }
 
 };
+
+// sdl: whenever the mouse moves, this callback is called
+// -------------------------------------------------------
+void mouse_callback(double xposIn, double yposIn)
+{
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    // Input
+    SDL_SetWindowRelativeMouseMode(window, true);
+    SDL_CaptureMouse(true);
+
+    // Get the current mouse state
+    float mouseX, mouseY;
+    SDL_GetMouseState(&mouseX, &mouseY);
+
+    // Print the mouse position
+    printf("Mouse Position: (%f, %f)\n", mouseX, mouseY);
+
+    // Warp the mouse back to the center of the window
+    SDL_WarpMouseInWindow(window, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
+
+    // Calculate offsets
+    float xoffset = xpos - (SCR_WIDTH / 2.0f);
+    float yoffset = (SCR_HEIGHT / 2.0f) - ypos; // reversed since y-coordinates go from bottom to top
+
+    // Update last positions
+    lastX = SCR_WIDTH / 2.0f;
+    lastY = SCR_HEIGHT / 2.0f;
+
+    float sensitivity = 0.01f; // change this value to your liking
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    // Make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+
+
+// sdl: whenever the mouse scroll wheel scrolls, this callback is called
+// ----------------------------------------------------------------------
+void scroll_callback(double xoffset, double yoffset)
+{
+    fov -= (float)yoffset;
+    if (fov < 1.0f)
+        fov = 1.0f;
+    if (fov > 45.0f)
+        fov = 45.0f;
+}
