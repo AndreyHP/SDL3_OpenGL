@@ -40,6 +40,20 @@ float Zdistance{-5.0f};
 float avgFPS = 0.0f;
 float deltaTime = 0.0f;
 
+glm::mat4 model         = glm::mat4(1.0f);
+glm::mat4 view          = glm::mat4(1.0f);
+glm::mat4 projection    = glm::mat4(1.0f);
+glm::vec3 cameraPos     = glm::vec3(0.0f,0.0f,3.0f);
+glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+//glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+//glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+
+
 void processEvents(SDL_Event *event);
 
 int main(int argc, char *argv[]) {
@@ -289,6 +303,10 @@ int main(int argc, char *argv[]) {
 
     float angle = 20.0f;
 
+
+    const float radius = 10.0f;
+    projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
     // Main loop
     SDL_Event event;
     while (!quit) {
@@ -357,12 +375,15 @@ int main(int argc, char *argv[]) {
 
          
 
-        glm::mat4 model         = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-        glm::mat4 view          = glm::mat4(1.0f);
-        glm::mat4 projection    = glm::mat4(1.0f);
-        
-        view  = glm::translate(view, glm::vec3(0.0f, 0.0f, Zdistance));
-        projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+        //float camX = sin(now) * radius;
+        //float camZ = cos(now) * radius;
+
+        //view  = glm::translate(view, glm::vec3(0.0f, 0.0f, Zdistance));
+
+        //view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+
+        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         
         // retrieve the matrix uniform locations
         unsigned int modelLoc = glGetUniformLocation(Defaultshader.ID, "model");
@@ -440,22 +461,24 @@ void processEvents(SDL_Event *event){
                 glViewport(0, 0, w, h); 
             }
 
+            const float cameraSpeed = 2.5f * delta;
             // Handle "W" key press to toggle wireframe mode
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
+                cameraPos += cameraSpeed * cameraFront;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
+                cameraPos -= cameraSpeed * cameraFront;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
+                cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
-                wireframe = !wireframe;
+                cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
-                fov++;
+                wireframe = !wireframe;
             }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_V) {
-                fov--;
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_UP) {
-                Zdistance+= 3.5f * delta;
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_DOWN) {
-                Zdistance-= 3.5f * delta;
-            }
+
         }
 
 };
