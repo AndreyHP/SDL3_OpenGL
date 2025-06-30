@@ -1,9 +1,8 @@
 #include "../include/glad/glad.h"
-#include "../include/shader.hpp"
+#include "../include/shader.h"
 #include "../include/stb/stb_image.h"
-#include "../include/glm/glm.hpp"
-#include "../include/glm/gtc/matrix_transform.hpp"
 #include "../include/glm/gtc/type_ptr.hpp"
+#include "../include/camera.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
@@ -23,10 +22,14 @@
 static SDL_Window *window = NULL;
 static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
 
-
 // settings
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
+
+// camera
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
 
 const int TARGET_FPS = 60;
 const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
@@ -44,19 +47,9 @@ float deltaTime = 0.0f;
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
 glm::mat4 projection    = glm::mat4(1.0f);
-glm::vec3 cameraPos     = glm::vec3(0.0f,0.0f,3.0f);
-glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
 float yaw   = -90.0f;
 float pitch =  0.0f;
-float lastX =  800.0f / 2.0;
-float lastY =  600.0 / 2.0;
-
 
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
@@ -380,17 +373,7 @@ int main(int argc, char *argv[]) {
         // create transformations
         const double now = ((double)SDL_GetTicks()) / 1000.0;
 
-         
-
-
-        //float camX = sin(now) * radius;
-        //float camZ = cos(now) * radius;
-
-        //view  = glm::translate(view, glm::vec3(0.0f, 0.0f, Zdistance));
-
-        //view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        view = camera.GetViewMatrix();
         
         // retrieve the matrix uniform locations
         unsigned int modelLoc = glGetUniformLocation(Defaultshader.ID, "model");
@@ -472,19 +455,18 @@ void processEvents(SDL_Event *event){
                 mouse_callback(event->motion.x, event->motion.y);
             }
 
-            const float cameraSpeed = 2.5f * delta;
-            // Handle "W" key press to toggle wireframe mode
+
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
-                cameraPos += cameraSpeed * cameraFront;
+                camera.ProcessKeyboard(FORWARD, delta);
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
-                cameraPos -= cameraSpeed * cameraFront;
+                camera.ProcessKeyboard(BACKWARD, delta);
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
-                cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                camera.ProcessKeyboard(LEFT, delta);
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
-                cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+                camera.ProcessKeyboard(RIGHT, delta);
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
                 wireframe = !wireframe;
@@ -506,11 +488,11 @@ void mouse_callback(double xposIn, double yposIn)
     SDL_CaptureMouse(true);
 
     // Get the current mouse state
-    float mouseX, mouseY;
-    SDL_GetMouseState(&mouseX, &mouseY);
+    //float mouseX, mouseY;
+    //SDL_GetMouseState(&mouseX, &mouseY);
 
     // Print the mouse position
-    printf("Mouse Position: (%f, %f)\n", mouseX, mouseY);
+    //printf("Mouse Position: (%f, %f)\n", mouseX, mouseY);
 
     // Warp the mouse back to the center of the window
     SDL_WarpMouseInWindow(window, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
@@ -523,24 +505,7 @@ void mouse_callback(double xposIn, double yposIn)
     lastX = SCR_WIDTH / 2.0f;
     lastY = SCR_HEIGHT / 2.0f;
 
-    float sensitivity = 0.01f; // change this value to your liking
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    // Make sure that when pitch is out of bounds, screen doesn't get flipped
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 

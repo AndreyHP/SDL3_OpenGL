@@ -6,7 +6,7 @@ TARGET = main
 OUTDIR = debug
 INCLUDE = -I:./include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXX = g++
-CXXFLAGS = -std=c++23  -Wall -Wextra -Weffc++ -pedantic-errors -O0
+CXXFLAGS = -std=c++23  -O0
 LINKER = -lGL -lX11 -lpthread -lXrandr -lXi  -l:libSDL3.a
 
 # Add -ggdb to the command line for debug builds and -O2 -DNDEBUG
