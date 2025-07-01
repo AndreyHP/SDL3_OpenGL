@@ -43,8 +43,11 @@ int width, height, nrChannels;
 int w, h;
 float fov{45.0f};
 float Zdistance{-5.0f};
-float avgFPS = 0.0f;
-float deltaTime = 0.0f;
+float avgFPS = {0.0f};
+float deltaTime = {0.0f};
+bool  captureMouse{false};
+bool  modelLoaded{false};
+bool  showModel{false};
 
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
@@ -156,8 +159,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    //load base model
+    Model ourModel;
+
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    stbi_set_flip_vertically_on_load(true);
+    //stbi_set_flip_vertically_on_load(true);
 
     // Variables for FPS calculation
     Uint32 frameCount = 0;
@@ -172,11 +178,11 @@ int main(int argc, char *argv[]) {
     glEnable(GL_DEPTH_TEST);
 
 
-    // load models
-    // -----------
-    Model ourModel("assets/backpack/backpack.obj");
-
+    float scale = 1.0f;
     float rotateModel = 45.0f;
+    float ZTranslate = 0.5f;
+    float YTranslate = 0.0f;
+    static char inputBuffer[256]; // Buffer for the text input
     // Main loop
     SDL_Event event;
     while (!quit) {
@@ -192,6 +198,17 @@ int main(int argc, char *argv[]) {
 
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
             ImGui::SliderFloat("Angle", &rotateModel, -20.0f, 50.0f);
+            ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);
+            ImGui::SliderFloat("YTranslate", &YTranslate, -20.0f, 20.0f);
+            ImGui::SliderFloat("ZTranslate", &ZTranslate, -20.0f, 20.0f);
+            ImGui::InputText("Model path", inputBuffer, sizeof(inputBuffer));
+            // Create a button
+            if (ImGui::Button("Submit")) {
+                // Action to perform when the button is pressed
+                // For example, print the input text to the console
+                printf("Input: %s\n", inputBuffer);
+                modelLoaded = true;
+            }
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
 
@@ -247,11 +264,23 @@ int main(int argc, char *argv[]) {
         float newAngle = rotateModel * now;
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.5f)); // translate it down so it's at the center of the scene
+        model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
         model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        model = glm::scale(model, glm::vec3(scale, scale, scale));
         Defaultshader.setMat4("model", model);
-        ourModel.Draw(Defaultshader);
+
+        if (modelLoaded){
+            ourModel.textures_loaded.clear();
+            ourModel.meshes.clear();
+
+            ourModel.Load(inputBuffer);
+            modelLoaded = false;
+            showModel = true;
+        }
+
+        if (showModel){
+            ourModel.Draw(Defaultshader);
+        }
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -300,8 +329,22 @@ void processEvents(SDL_Event *event){
                 glViewport(0, 0, w, h); 
             }
 
-            if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
-                mouse_callback(event->motion.x, event->motion.y);
+
+            if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == SDL_BUTTON_RIGHT) {
+                captureMouse = !captureMouse;
+            }
+
+            if (captureMouse){
+                // Input
+                SDL_SetWindowRelativeMouseMode(window, true);
+                SDL_CaptureMouse(true);
+                if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
+                    mouse_callback(event->motion.x, event->motion.y);
+                }
+            }else{
+                // Input
+                SDL_SetWindowRelativeMouseMode(window, false);
+                SDL_CaptureMouse(false);
             }
 
 
@@ -331,10 +374,6 @@ void mouse_callback(double xposIn, double yposIn)
 {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
-
-    // Input
-    SDL_SetWindowRelativeMouseMode(window, true);
-    SDL_CaptureMouse(true);
 
     // Get the current mouse state
     //float mouseX, mouseY;
@@ -368,3 +407,4 @@ void scroll_callback(double xoffset, double yoffset)
     if (fov > 45.0f)
         fov = 45.0f;
 }
+
