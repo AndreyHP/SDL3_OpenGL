@@ -39,6 +39,8 @@ const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
 bool wireframe = false;
 bool quit = false;
 Shader Defaultshader;
+Shader shader;
+Shader shaderSingleColor;
 int width, height, nrChannels;
 int w, h;
 float fov{45.0f};
@@ -48,6 +50,7 @@ float deltaTime = {0.0f};
 bool  captureMouse{false};
 bool  modelLoaded{false};
 bool  showModel{false};
+bool  showOutline{false};
 
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
@@ -173,10 +176,16 @@ int main(int argc, char *argv[]) {
     SDL_GetWindowSize(window, &w, &h);
     glViewport(0, 0, w, h);
 
-    // Compile shaders
-    Defaultshader.compile("./glsl/shader.vs", "./glsl/shader.fs");
     glEnable(GL_DEPTH_TEST);
 
+    // Compile shaders
+    Defaultshader.compile("./glsl/shader.vs", "./glsl/shader.fs");
+
+    shaderSingleColor.compile("./glsl/stencil_testing.vs", "./glsl/stencil_single_color.fs");
+
+    // activate shader
+    Defaultshader.use();
+    Defaultshader.setInt("texture1", 0);
 
     float scale = 1.0f;
     float rotateModel = 45.0f;
@@ -188,6 +197,16 @@ int main(int argc, char *argv[]) {
     while (!quit) {
        Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
         processEvents(&event);
+
+        if (showOutline){
+            glDepthFunc(GL_LESS);
+            glEnable(GL_STENCIL_TEST);
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+            glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        }else{
+            glEnable(GL_DEPTH_TEST);
+            glDisable(GL_STENCIL_TEST);
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -212,10 +231,10 @@ int main(int argc, char *argv[]) {
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
 
-       
+
         // Render
         glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         if (wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -223,7 +242,7 @@ int main(int argc, char *argv[]) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
 
-        
+
         frameCount++;
 
         // Calculate FPS every second
@@ -236,7 +255,6 @@ int main(int argc, char *argv[]) {
             startTime = currentTime; // Reset timer
         }
 
-        
         // Calculate delta time
         deltaTime = (currentTime - previousFrameTime) / 1000.0f; // Convert to seconds
         previousFrameTime = currentTime; // Update previous frame time
@@ -247,19 +265,36 @@ int main(int argc, char *argv[]) {
             SDL_Delay(FRAME_TIME - frameTime);
         }
 
-        // activate shader
-        Defaultshader.use();
+        if (showOutline){
+            shaderSingleColor.use();
+        }
+
         // create transformations
         const double now = ((double)SDL_GetTicks()) / 1000.0;
 
         view = camera.GetViewMatrix();
 
-        
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        Defaultshader.setMat4("projection", projection);
-        Defaultshader.setMat4("view", view);
+
+
+        if (showOutline){
+            shaderSingleColor.setMat4("view", view);
+            shaderSingleColor.setMat4("projection", projection);
+
+            Defaultshader.use();
+            Defaultshader.setMat4("projection", projection);
+            Defaultshader.setMat4("view", view);
+        }else{
+            Defaultshader.use();
+            Defaultshader.setMat4("projection", projection);
+            Defaultshader.setMat4("view", view);
+        }
+
+        if (showOutline){
+            glStencilMask(0x00);
+        }
 
         float newAngle = rotateModel * now;
         // render the loaded model
@@ -278,13 +313,45 @@ int main(int argc, char *argv[]) {
             showModel = true;
         }
 
+        if (showOutline){
+            glStencilFunc(GL_ALWAYS, 1, 0xFF);
+            glStencilMask(0xFF);
+        }
+
+
         if (showModel){
             ourModel.Draw(Defaultshader);
         }
 
+        if (showOutline){
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+            glStencilMask(0x00);
+            glDisable(GL_DEPTH_TEST);
+            shaderSingleColor.use();
+
+             if (showModel){
+                ourModel.Draw(shaderSingleColor);
+            }
+
+
+            // render the loaded model
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
+            model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
+            model = glm::scale(model, glm::vec3(scale + 0.02f, scale + 0.02f, scale + 0.02f));
+            //Defaultshader.setMat4("model", model);
+            shaderSingleColor.setMat4("model", model);
+
+            glStencilMask(0xFF);
+            glStencilFunc(GL_ALWAYS, 0, 0xFF);
+            glEnable(GL_DEPTH_TEST);
+
+            }
+
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-         
+
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
@@ -362,6 +429,9 @@ void processEvents(SDL_Event *event){
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
                 wireframe = !wireframe;
+            }
+            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
+                showOutline = !showOutline;
             }
 
         }
