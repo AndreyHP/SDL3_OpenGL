@@ -27,6 +27,7 @@ class Model
 {
 public:
     // model data
+    glm::mat4 model         = glm::mat4(1.0f);
     vector<Texture> textures_loaded; // stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     vector<Mesh> meshes;
     string directory;
@@ -46,8 +47,20 @@ public:
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
-        for(unsigned int i = 0; i < meshes.size(); i++)
+        model = glm::mat4(1.0f);
+        for(unsigned int i = 0; i < meshes.size(); i++){
             meshes[i].Draw(shader);
+        }
+    }
+
+    void Translate(float x, float y, float z){
+        model = glm::translate(model, glm::vec3(x, y, z));
+    }
+    void Rotate(float x, float y, float z, float angle){
+        model = glm::rotate(model, glm::radians(angle), glm::vec3(x, y, z));
+    }
+    void Scale(float x, float y, float z){
+        model = glm::scale(model, glm::vec3(x, y, z));
     }
 
 private:

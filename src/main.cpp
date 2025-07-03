@@ -191,6 +191,7 @@ int main(int argc, char *argv[]) {
     float rotateModel = 45.0f;
     float ZTranslate = 0.5f;
     float YTranslate = 0.0f;
+
     static char inputBuffer[256]; // Buffer for the text input
     // Main loop
     SDL_Event event;
@@ -272,11 +273,9 @@ int main(int argc, char *argv[]) {
         // create transformations
         const double now = ((double)SDL_GetTicks()) / 1000.0;
 
-        view = camera.GetViewMatrix();
-
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
+        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        view = camera.GetViewMatrix();
 
 
         if (showOutline){
@@ -296,13 +295,22 @@ int main(int argc, char *argv[]) {
             glStencilMask(0x00);
         }
 
+
         float newAngle = rotateModel * now;
+
         // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
-        model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
-        model = glm::scale(model, glm::vec3(scale, scale, scale));
-        Defaultshader.setMat4("model", model);
+        if (showModel){
+            ourModel.Draw(Defaultshader);
+        }
+        //model = glm::mat4(1.0f);
+        //ourModel.model = glm::mat4(1.0f);
+        //model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
+        //model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
+        //model = glm::scale(model, glm::vec3(scale, scale, scale));
+        ourModel.Translate(0.0f, YTranslate, ZTranslate);
+        ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
+        ourModel.Scale(scale, scale, scale);
+        Defaultshader.setMat4("model", ourModel.model);
 
         if (modelLoaded){
             ourModel.textures_loaded.clear();
@@ -318,10 +326,6 @@ int main(int argc, char *argv[]) {
             glStencilMask(0xFF);
         }
 
-
-        if (showModel){
-            ourModel.Draw(Defaultshader);
-        }
 
         if (showOutline){
             glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
