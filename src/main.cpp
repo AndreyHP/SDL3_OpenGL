@@ -51,6 +51,7 @@ bool  captureMouse{false};
 bool  modelLoaded{false};
 bool  showModel{false};
 bool  showOutline{false};
+Model ourModel;
 
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
@@ -162,9 +163,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    //load base model
-    Model ourModel;
-
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     //stbi_set_flip_vertically_on_load(true);
 
@@ -198,16 +196,6 @@ int main(int argc, char *argv[]) {
     while (!quit) {
        Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
         processEvents(&event);
-
-        if (showOutline){
-            glDepthFunc(GL_LESS);
-            glEnable(GL_STENCIL_TEST);
-            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-            glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-        }else{
-            glEnable(GL_DEPTH_TEST);
-            glDisable(GL_STENCIL_TEST);
-        }
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -266,8 +254,8 @@ int main(int argc, char *argv[]) {
             SDL_Delay(FRAME_TIME - frameTime);
         }
 
-        if (showOutline){
-            shaderSingleColor.use();
+        if (ourModel.outline){
+            ourModel.OutlineInit(shaderSingleColor);
         }
 
         // create transformations
@@ -278,7 +266,7 @@ int main(int argc, char *argv[]) {
         view = camera.GetViewMatrix();
 
 
-        if (showOutline){
+        if (ourModel.outline){
             shaderSingleColor.setMat4("view", view);
             shaderSingleColor.setMat4("projection", projection);
 
@@ -291,22 +279,13 @@ int main(int argc, char *argv[]) {
             Defaultshader.setMat4("view", view);
         }
 
-        if (showOutline){
-            glStencilMask(0x00);
-        }
-
-
-        float newAngle = rotateModel * now;
-
         // render the loaded model
         if (showModel){
             ourModel.Draw(Defaultshader);
         }
-        //model = glm::mat4(1.0f);
-        //ourModel.model = glm::mat4(1.0f);
-        //model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
-        //model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
-        //model = glm::scale(model, glm::vec3(scale, scale, scale));
+
+        float newAngle = rotateModel * now;
+
         ourModel.Translate(0.0f, YTranslate, ZTranslate);
         ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
         ourModel.Scale(scale, scale, scale);
@@ -321,35 +300,14 @@ int main(int argc, char *argv[]) {
             showModel = true;
         }
 
-        if (showOutline){
-            glStencilFunc(GL_ALWAYS, 1, 0xFF);
-            glStencilMask(0xFF);
-        }
 
+        if (ourModel.outline){
 
-        if (showOutline){
-            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-            glStencilMask(0x00);
-            glDisable(GL_DEPTH_TEST);
-            shaderSingleColor.use();
+            ourModel.drawOutline(shaderSingleColor);
 
-             if (showModel){
-                ourModel.Draw(shaderSingleColor);
-            }
-
-
-            // render the loaded model
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(0.0f, YTranslate, ZTranslate));
-            model = glm::rotate(model, glm::radians(newAngle), glm::vec3(0.0f, 0.5f, 0.0f));
-            model = glm::scale(model, glm::vec3(scale + 0.02f, scale + 0.02f, scale + 0.02f));
-            //Defaultshader.setMat4("model", model);
-            shaderSingleColor.setMat4("model", model);
-
-            glStencilMask(0xFF);
-            glStencilFunc(GL_ALWAYS, 0, 0xFF);
-            glEnable(GL_DEPTH_TEST);
-
+            ourModel.Translate(0.0f, YTranslate, ZTranslate);
+            ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
+            ourModel.Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
             }
 
 
@@ -435,7 +393,7 @@ void processEvents(SDL_Event *event){
                 wireframe = !wireframe;
             }
             if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
-                showOutline = !showOutline;
+                ourModel.outline = !ourModel.outline;
             }
 
         }

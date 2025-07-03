@@ -28,6 +28,7 @@ class Model
 public:
     // model data
     glm::mat4 model         = glm::mat4(1.0f);
+    bool outline{false};
     vector<Texture> textures_loaded; // stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     vector<Mesh> meshes;
     string directory;
@@ -40,7 +41,6 @@ public:
 
     // Function to load a model from a file
     void Load(string const &path) {
-
         loadModel(path);
     }
 
@@ -61,6 +61,41 @@ public:
     }
     void Scale(float x, float y, float z){
         model = glm::scale(model, glm::vec3(x, y, z));
+    }
+
+    void OutlineInit(Shader &shader){
+
+         if (outline){
+            glDepthFunc(GL_LESS);
+            glEnable(GL_STENCIL_TEST);
+            glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+            glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+        }else{
+            glEnable(GL_DEPTH_TEST);
+            glDisable(GL_STENCIL_TEST);
+        }
+        shader.use();
+
+        shader.setMat4("model", model);
+
+
+        glStencilMask(0x00);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+    }
+    void drawOutline(Shader &shader){
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+        glStencilMask(0x00);
+        glDisable(GL_DEPTH_TEST);
+        shader.use();
+
+        Draw(shader);
+
+        shader.setMat4("model", model);
+
+        glStencilMask(0xFF);
+        glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        glEnable(GL_DEPTH_TEST);
     }
 
 private:
