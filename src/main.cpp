@@ -7,8 +7,8 @@
 #include "../include/model.h"
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
-//#include <SDL3/SDL_events.h>
-//#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_log.h>
@@ -16,32 +16,33 @@
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_video.h>
+#include "../include/appstate.h"
 #include "../include/imgui/imgui.h"
 #include "../include/imgui/backends/imgui_impl_sdl3.h"
 #include "../include/imgui/backends/imgui_impl_opengl3.h"
 
-
+AppState appState;
 
 /* We will use this renderer to draw into this window every frame. */
-static SDL_Window *window = NULL;
-static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
+//static SDL_Window *window = NULL;
+//static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
 
 // settings
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+//const unsigned int SCR_WIDTH = 1280;
+//const unsigned int SCR_HEIGHT = 720;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
+//Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+//float lastX = SCR_WIDTH / 2.0f;
+//float lastY = SCR_HEIGHT / 2.0f;
 
 const int TARGET_FPS = 60;
 const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
 
-bool wireframe = false;
-Shader Defaultshader;
-Shader shader;
-Shader shaderSingleColor;
+//bool wireframe = false;
+//Shader Defaultshader;
+//Shader shader;
+//Shader shaderSingleColor;
 int width, height, nrChannels;
 int w, h;
 float fov{45.0f};
@@ -87,7 +88,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
 
     // Set application metadata
-    SDL_SetAppMetadata("Example Renderer", "1.0", "com.example.renderer");
+    SDL_SetAppMetadata("3D Renderer", "1.0", "com.example.renderer");
 
     // Initialize SDL
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -113,8 +114,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Create window
-    window = SDL_CreateWindow("Example", SCR_WIDTH, SCR_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    if (!window) {
+    appState.window = SDL_CreateWindow("Example", appState.SCR_WIDTH, appState.SCR_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if (!appState.window) {
         SDL_Log("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
         return SDL_APP_FAILURE;
@@ -122,17 +123,17 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Create OpenGL context
-    glContext = SDL_GL_CreateContext(window);
-    if (!glContext) {
+    appState.glContext = SDL_GL_CreateContext(appState.window);
+    if (!appState.glContext) {
         SDL_Log("Could not create OpenGL context: %s", SDL_GetError());
-        SDL_DestroyWindow(window);
+        SDL_DestroyWindow(appState.window);
         SDL_Quit();
         return SDL_APP_FAILURE;
     }
 
-    SDL_GL_MakeCurrent(window, glContext);
+    SDL_GL_MakeCurrent(appState.window, appState.glContext);
     SDL_GL_SetSwapInterval(1); // Enable vsync
-    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_SetWindowPosition(appState.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 
     SetupImGUI(main_scale, glsl_version);
@@ -141,8 +142,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         SDL_Log("Failed to initialize GLAD");
-        SDL_GL_DestroyContext(glContext);
-        SDL_DestroyWindow(window);
+        SDL_GL_DestroyContext(appState.glContext);
+        SDL_DestroyWindow(appState.window);
         SDL_Quit();
         return SDL_APP_FAILURE;
     }
@@ -150,19 +151,19 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     //stbi_set_flip_vertically_on_load(true);
 
-    SDL_GetWindowSize(window, &w, &h);
+    SDL_GetWindowSize(appState.window, &w, &h);
     glViewport(0, 0, w, h);
 
     glEnable(GL_DEPTH_TEST);
 
     // Compile shaders
-    Defaultshader.compile("./glsl/shader.vs", "./glsl/shader.fs");
+    appState.defaultShader.compile("./glsl/shader.vs", "./glsl/shader.fs");
 
-    shaderSingleColor.compile("./glsl/stencil_testing.vs", "./glsl/stencil_single_color.fs");
+    appState.singleColorShader.compile("./glsl/stencil_testing.vs", "./glsl/stencil_single_color.fs");
 
     // activate shader
-    Defaultshader.use();
-    Defaultshader.setInt("texture1", 0);
+    appState.defaultShader.use();
+    appState.defaultShader.setInt("texture1", 0);
 
     return SDL_APP_CONTINUE;
 
@@ -185,7 +186,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     }
 
     if (event->type == SDL_EVENT_WINDOW_RESIZED) {
-        SDL_GetWindowSize(window, &w, &h);
+        SDL_GetWindowSize(appState.window, &w, &h);
         glViewport(0, 0, w, h);
     }
 
@@ -196,32 +197,32 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 
     if (captureMouse){
         // Input
-        SDL_SetWindowRelativeMouseMode(window, true);
+        SDL_SetWindowRelativeMouseMode(appState.window, true);
         SDL_CaptureMouse(true);
         if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
             mouse_callback(event->motion.x, event->motion.y);
         }
     }else{
         // Input
-        SDL_SetWindowRelativeMouseMode(window, false);
+        SDL_SetWindowRelativeMouseMode(appState.window, false);
         SDL_CaptureMouse(false);
     }
 
 
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
-        camera.ProcessKeyboard(FORWARD, delta);
+        appState.camera.ProcessKeyboard(FORWARD, delta);
     }
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
-        camera.ProcessKeyboard(BACKWARD, delta);
+        appState.camera.ProcessKeyboard(BACKWARD, delta);
     }
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
-        camera.ProcessKeyboard(LEFT, delta);
+        appState.camera.ProcessKeyboard(LEFT, delta);
     }
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
-        camera.ProcessKeyboard(RIGHT, delta);
+        appState.camera.ProcessKeyboard(RIGHT, delta);
     }
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
-        wireframe = !wireframe;
+        appState.wireframe = !appState.wireframe;
     }
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
         ourModel.outline = !ourModel.outline;
@@ -264,7 +265,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        if (wireframe) {
+        if (appState.wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         } else {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -294,33 +295,33 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         }
 
         if (ourModel.outline){
-            ourModel.OutlineInit(shaderSingleColor);
+            ourModel.OutlineInit(appState.singleColorShader);
         }
 
         // create transformations
         const double now = ((double)SDL_GetTicks()) / 1000.0;
 
         // view/projection transformations
-        projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        view = camera.GetViewMatrix();
+        projection = glm::perspective(glm::radians(appState.camera.Zoom), (float)appState.SCR_WIDTH / (float)appState.SCR_HEIGHT, 0.1f, 100.0f);
+        view = appState.camera.GetViewMatrix();
 
 
         if (ourModel.outline){
-            shaderSingleColor.setMat4("view", view);
-            shaderSingleColor.setMat4("projection", projection);
+            appState.singleColorShader.setMat4("view", view);
+            appState.singleColorShader.setMat4("projection", projection);
 
-            Defaultshader.use();
-            Defaultshader.setMat4("projection", projection);
-            Defaultshader.setMat4("view", view);
+            appState.defaultShader.use();
+            appState.defaultShader.setMat4("projection", projection);
+            appState.defaultShader.setMat4("view", view);
         }else{
-            Defaultshader.use();
-            Defaultshader.setMat4("projection", projection);
-            Defaultshader.setMat4("view", view);
+            appState.defaultShader.use();
+            appState.defaultShader.setMat4("projection", projection);
+            appState.defaultShader.setMat4("view", view);
         }
 
         // render the loaded model
         if (showModel){
-            ourModel.Draw(Defaultshader);
+            ourModel.Draw(appState.defaultShader);
         }
 
         float newAngle = rotateModel * now;
@@ -328,7 +329,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         ourModel.Translate(0.0f, YTranslate, ZTranslate);
         ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
         ourModel.Scale(scale, scale, scale);
-        Defaultshader.setMat4("model", ourModel.model);
+        appState.defaultShader.setMat4("model", ourModel.model);
 
         if (modelLoaded){
             ourModel.textures_loaded.clear();
@@ -342,7 +343,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
         if (ourModel.outline){
 
-            ourModel.drawOutline(shaderSingleColor);
+            ourModel.drawOutline(appState.singleColorShader);
 
             ourModel.Translate(0.0f, YTranslate, ZTranslate);
             ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
@@ -354,7 +355,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Swap buffers
-        SDL_GL_SwapWindow(window);
+        SDL_GL_SwapWindow(appState.window);
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -368,8 +369,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 
-    SDL_GL_DestroyContext(glContext);
-    SDL_DestroyWindow(window);
+    SDL_GL_DestroyContext(appState.glContext);
+    SDL_DestroyWindow(appState.window);
     SDL_Quit();
 
 }
@@ -390,17 +391,17 @@ void mouse_callback(double xposIn, double yposIn)
     //printf("Mouse Position: (%f, %f)\n", mouseX, mouseY);
 
     // Warp the mouse back to the center of the window
-    SDL_WarpMouseInWindow(window, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
+    SDL_WarpMouseInWindow(appState.window, appState.SCR_WIDTH / 2.0f, appState.SCR_HEIGHT / 2.0f);
 
     // Calculate offsets
-    float xoffset = xpos - (SCR_WIDTH / 2.0f);
-    float yoffset = (SCR_HEIGHT / 2.0f) - ypos; // reversed since y-coordinates go from bottom to top
+    float xoffset = xpos - (appState.SCR_WIDTH / 2.0f);
+    float yoffset = (appState.SCR_HEIGHT / 2.0f) - ypos; // reversed since y-coordinates go from bottom to top
 
     // Update last positions
-    lastX = SCR_WIDTH / 2.0f;
-    lastY = SCR_HEIGHT / 2.0f;
+    appState.lastX = appState.SCR_WIDTH / 2.0f;
+    appState.lastY = appState.SCR_HEIGHT / 2.0f;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    appState.camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 
@@ -430,7 +431,7 @@ void SetupImGUI(float mainScale, const char* glsl_version) {
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplSDL3_InitForOpenGL(window, glContext);
+    ImGui_ImplSDL3_InitForOpenGL(appState.window, appState.glContext);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
      // Setup scaling
