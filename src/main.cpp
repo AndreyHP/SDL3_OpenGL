@@ -1,12 +1,14 @@
+#define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #include "../include/glad/glad.h"
 #include "../include/shader.h"
 #include "../include/stb/stb_image.h"
-#include "../include/glm/gtc/type_ptr.hpp"
+//#include "../include/glm/gtc/type_ptr.hpp"
 #include "../include/camera.h"
 #include "../include/model.h"
+#include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_init.h>
+//#include <SDL3/SDL_events.h>
+//#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_log.h>
@@ -37,7 +39,6 @@ const int TARGET_FPS = 60;
 const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
 
 bool wireframe = false;
-bool quit = false;
 Shader Defaultshader;
 Shader shader;
 Shader shaderSingleColor;
@@ -57,15 +58,33 @@ glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
 glm::mat4 projection    = glm::mat4(1.0f);
 
+ImGuiIO *gio;
+
 float yaw   = -90.0f;
 float pitch =  0.0f;
+
+ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+float scale = 1.0f;
+float rotateModel = 45.0f;
+float ZTranslate = 0.5f;
+float YTranslate = 0.0f;
+
+// Variables for FPS calculation
+Uint32 frameCount = 0;
+Uint32 startTime = SDL_GetTicks();
+Uint32 previousFrameTime = startTime; // Initialize with start time
+
+static char inputBuffer[256]; // Buffer for the text input
 
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
 void processEvents(SDL_Event *event);
+void SetupImGUI(float mainScale, const char* glsl_version);
 
-int main(int argc, char *argv[]) {
 
+/* This function runs once at startup. */
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
+{
 
     // Set application metadata
     SDL_SetAppMetadata("Example Renderer", "1.0", "com.example.renderer");
@@ -73,7 +92,7 @@ int main(int argc, char *argv[]) {
     // Initialize SDL
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("Could not initialize SDL: %s", SDL_GetError());
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
     const char* glsl_version = "#version 130";
@@ -83,10 +102,9 @@ int main(int argc, char *argv[]) {
         !SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)) {
         SDL_Log("Could not set OpenGL attributes: %s", SDL_GetError());
         SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
-    
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -99,7 +117,7 @@ int main(int argc, char *argv[]) {
     if (!window) {
         SDL_Log("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
 
@@ -109,49 +127,15 @@ int main(int argc, char *argv[]) {
         SDL_Log("Could not create OpenGL context: %s", SDL_GetError());
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
     SDL_GL_MakeCurrent(window, glContext);
     SDL_GL_SetSwapInterval(1); // Enable vsync
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
-     // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplSDL3_InitForOpenGL(window, glContext);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-
-
-     // Setup scaling
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-    style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
-    io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-    io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
-
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-
-     // Our state
-    //bool show_demo_window = true;
-    //bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    SetupImGUI(main_scale, glsl_version);
 
 
     // Initialize GLAD
@@ -160,16 +144,11 @@ int main(int argc, char *argv[]) {
         SDL_GL_DestroyContext(glContext);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
     }
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     //stbi_set_flip_vertically_on_load(true);
-
-    // Variables for FPS calculation
-    Uint32 frameCount = 0;
-    Uint32 startTime = SDL_GetTicks();
-    Uint32 previousFrameTime = startTime; // Initialize with start time
 
     SDL_GetWindowSize(window, &w, &h);
     glViewport(0, 0, w, h);
@@ -185,19 +164,79 @@ int main(int argc, char *argv[]) {
     Defaultshader.use();
     Defaultshader.setInt("texture1", 0);
 
-    float scale = 1.0f;
-    float rotateModel = 45.0f;
-    float ZTranslate = 0.5f;
-    float YTranslate = 0.0f;
+    return SDL_APP_CONTINUE;
 
-    static char inputBuffer[256]; // Buffer for the text input
-    // Main loop
-    SDL_Event event;
-    while (!quit) {
-       Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
-        processEvents(&event);
+}
 
-        // Start the Dear ImGui frame
+/* This function runs when a new event (mouse input, keypresses, etc) occurs. */
+SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
+{
+
+    const double delta = deltaTime;
+    ImGui_ImplSDL3_ProcessEvent(event);
+
+    if (event->type == SDL_EVENT_QUIT) {
+        return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
+    }
+
+
+    if (event->type == SDL_EVENT_QUIT || event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
+        return SDL_APP_SUCCESS;
+    }
+
+    if (event->type == SDL_EVENT_WINDOW_RESIZED) {
+        SDL_GetWindowSize(window, &w, &h);
+        glViewport(0, 0, w, h);
+    }
+
+
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == SDL_BUTTON_RIGHT) {
+        captureMouse = !captureMouse;
+    }
+
+    if (captureMouse){
+        // Input
+        SDL_SetWindowRelativeMouseMode(window, true);
+        SDL_CaptureMouse(true);
+        if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
+            mouse_callback(event->motion.x, event->motion.y);
+        }
+    }else{
+        // Input
+        SDL_SetWindowRelativeMouseMode(window, false);
+        SDL_CaptureMouse(false);
+    }
+
+
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
+        camera.ProcessKeyboard(FORWARD, delta);
+    }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
+        camera.ProcessKeyboard(BACKWARD, delta);
+    }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
+        camera.ProcessKeyboard(LEFT, delta);
+    }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
+        camera.ProcessKeyboard(RIGHT, delta);
+    }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
+        wireframe = !wireframe;
+    }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
+        ourModel.outline = !ourModel.outline;
+    }
+
+    return SDL_APP_CONTINUE;  /* carry on with the program! */
+}
+
+
+/* This function runs once per frame, and is the heart of the program. */
+SDL_AppResult SDL_AppIterate(void *appstate)
+{
+    Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
+
+    // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
@@ -217,7 +256,7 @@ int main(int argc, char *argv[]) {
                 printf("Input: %s\n", inputBuffer);
                 modelLoaded = true;
             }
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / gio->Framerate, gio->Framerate);
             ImGui::End();
 
 
@@ -314,23 +353,17 @@ int main(int argc, char *argv[]) {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            SDL_Window* backup_current_window = SDL_GL_GetCurrentWindow();
-            SDL_GLContext backup_current_context = SDL_GL_GetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            SDL_GL_MakeCurrent(backup_current_window, backup_current_context);
-        }
-
-
         // Swap buffers
         SDL_GL_SwapWindow(window);
 
-    }
+    return SDL_APP_CONTINUE;  /* carry on with the program! */
+}
 
-    // Cleanup
-    
+
+/* This function runs once at shutdown. */
+void SDL_AppQuit(void *appstate, SDL_AppResult result)
+{
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
@@ -339,66 +372,8 @@ int main(int argc, char *argv[]) {
     SDL_DestroyWindow(window);
     SDL_Quit();
 
-    return 0;
 }
 
-void processEvents(SDL_Event *event){
-        
-    const double delta = deltaTime;
-    
-    while (SDL_PollEvent(event)) {
-           ImGui_ImplSDL3_ProcessEvent(event);
-            
-            if (event->type == SDL_EVENT_QUIT || event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_ESCAPE) {
-                quit = true;
-            }
-
-            if (event->type == SDL_EVENT_WINDOW_RESIZED) {
-                SDL_GetWindowSize(window, &w, &h);
-                glViewport(0, 0, w, h); 
-            }
-
-
-            if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN && event->button.button == SDL_BUTTON_RIGHT) {
-                captureMouse = !captureMouse;
-            }
-
-            if (captureMouse){
-                // Input
-                SDL_SetWindowRelativeMouseMode(window, true);
-                SDL_CaptureMouse(true);
-                if (event->motion.type == SDL_EVENT_MOUSE_MOTION){
-                    mouse_callback(event->motion.x, event->motion.y);
-                }
-            }else{
-                // Input
-                SDL_SetWindowRelativeMouseMode(window, false);
-                SDL_CaptureMouse(false);
-            }
-
-
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
-                camera.ProcessKeyboard(FORWARD, delta);
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
-                camera.ProcessKeyboard(BACKWARD, delta);
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
-                camera.ProcessKeyboard(LEFT, delta);
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
-                camera.ProcessKeyboard(RIGHT, delta);
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
-                wireframe = !wireframe;
-            }
-            if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
-                ourModel.outline = !ourModel.outline;
-            }
-
-        }
-
-};
 
 // sdl: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
@@ -439,4 +414,33 @@ void scroll_callback(double xoffset, double yoffset)
     if (fov > 45.0f)
         fov = 45.0f;
 }
+
+
+// Function to access ImGuiIO globally
+void SetupImGUI(float mainScale, const char* glsl_version) {
+     // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplSDL3_InitForOpenGL(window, glContext);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+     // Setup scaling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(mainScale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = mainScale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+    io.ConfigDpiScaleFonts = true;          // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+    io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+
+    gio = &io;
+}
+
 
