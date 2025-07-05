@@ -77,11 +77,11 @@ Uint32 previousFrameTime = startTime; // Initialize with start time
 
 static char inputBuffer[256]; // Buffer for the text input
 
+
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
 void processEvents(SDL_Event *event);
 void SetupImGUI(float mainScale, const char* glsl_version);
-
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
@@ -157,13 +157,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
 
     // Compile shaders
-    appState.defaultShader.compile("./glsl/shader.vs", "./glsl/shader.fs");
+    appState.defaultShader.compile("./glsl/psx.vs", "./glsl/shader.fs");
 
     appState.singleColorShader.compile("./glsl/stencil_testing.vs", "./glsl/stencil_single_color.fs");
 
     // activate shader
     appState.defaultShader.use();
-    appState.defaultShader.setInt("texture1", 0);
+    appState.defaultShader.setInt("texture_diffuse1", 0);
 
     return SDL_APP_CONTINUE;
 
@@ -235,8 +235,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 /* This function runs once per frame, and is the heart of the program. */
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
+    // create transformations
+    const double now = ((double)SDL_GetTicks()) / 1000.0;
     Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
-
     // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
@@ -298,8 +299,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             ourModel.OutlineInit(appState.singleColorShader);
         }
 
-        // create transformations
-        const double now = ((double)SDL_GetTicks()) / 1000.0;
 
         // view/projection transformations
         projection = glm::perspective(glm::radians(appState.camera.Zoom), (float)appState.SCR_WIDTH / (float)appState.SCR_HEIGHT, 0.1f, 100.0f);
@@ -443,5 +442,4 @@ void SetupImGUI(float mainScale, const char* glsl_version) {
 
     gio = &io;
 }
-
 
