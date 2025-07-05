@@ -236,8 +236,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     // create transformations
-    const double now = ((double)SDL_GetTicks()) / 1000.0;
     Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
+    const double now = ((double)frameStart) / 1000.0;
     // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
@@ -442,4 +442,3 @@ void SetupImGUI(float mainScale, const char* glsl_version) {
 
     gio = &io;
 }
-
