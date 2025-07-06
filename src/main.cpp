@@ -2,7 +2,7 @@
 #include "../include/glad/glad.h"
 #include "../include/shader.h"
 #include "../include/stb/stb_image.h"
-//#include "../include/glm/gtc/type_ptr.hpp"
+#include "../include/framebuffer.h"
 #include "../include/camera.h"
 #include "../include/model.h"
 #include <SDL3/SDL_main.h>
@@ -23,26 +23,10 @@
 
 AppState appState;
 
-/* We will use this renderer to draw into this window every frame. */
-//static SDL_Window *window = NULL;
-//static SDL_GLContext glContext; // Use SDL_GLContext for OpenGL context
-
-// settings
-//const unsigned int SCR_WIDTH = 1280;
-//const unsigned int SCR_HEIGHT = 720;
-
-// camera
-//Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
-//float lastX = SCR_WIDTH / 2.0f;
-//float lastY = SCR_HEIGHT / 2.0f;
 
 const int TARGET_FPS = 60;
 const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
 
-//bool wireframe = false;
-//Shader Defaultshader;
-//Shader shader;
-//Shader shaderSingleColor;
 int width, height, nrChannels;
 int w, h;
 float fov{45.0f};
@@ -77,6 +61,9 @@ Uint32 previousFrameTime = startTime; // Initialize with start time
 
 static char inputBuffer[256]; // Buffer for the text input
 
+bool postprecess{false};
+Framebuffer framebuffer;
+ScreenQuad screenquad;
 
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
@@ -165,6 +152,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     appState.defaultShader.use();
     appState.defaultShader.setInt("texture_diffuse1", 0);
 
+    // Initialize framebuffer and screen quad
+    framebuffer.Create(w, h, false);
+    screenquad.Create("./glsl/postprocess.vs", "./glsl/postprocess.fs");
+
+
     return SDL_APP_CONTINUE;
 
 }
@@ -227,6 +219,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
         ourModel.outline = !ourModel.outline;
     }
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_P) {
+        postprecess = !postprecess;
+    }
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
@@ -262,6 +257,10 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             ImGui::End();
 
 
+        if (postprecess){
+        // Render to framebuffer
+        framebuffer.Bind();
+        }
         // Render
         glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -349,6 +348,13 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             ourModel.Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
             }
 
+        if (postprecess){
+        // Render framebuffer to screen with post-processing
+        framebuffer.Unbind(w, h);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        screenquad.Draw(framebuffer.textureColorBuffer);
+        }
+
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -364,6 +370,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
 
+    framebuffer.Delete();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
