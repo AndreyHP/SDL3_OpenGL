@@ -156,7 +156,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     framebuffer.Create(w, h, false);
     screenquad.Create("./glsl/postprocess.vs", "./glsl/postprocess.fs");
 
-
     return SDL_APP_CONTINUE;
 
 }
@@ -241,7 +240,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-            ImGui::SliderFloat("Angle", &rotateModel, -20.0f, 50.0f);
+            ImGui::SliderFloat("Angle", &rotateModel, 0.0f, 50.0f);
             ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);
             ImGui::SliderFloat("YTranslate", &YTranslate, -20.0f, 20.0f);
             ImGui::SliderFloat("ZTranslate", &ZTranslate, -20.0f, 20.0f);

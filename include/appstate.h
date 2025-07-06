@@ -11,8 +11,8 @@ struct AppState {
     SDL_GLContext glContext = nullptr;
 
     // Window size
-    int SCR_WIDTH = 1280;
-    int SCR_HEIGHT = 720;
+    int SCR_WIDTH = 1920;
+    int SCR_HEIGHT = 1080;
 
     // Camera
     Camera camera{glm::vec3(0.0f, 0.0f, 5.0f)};
