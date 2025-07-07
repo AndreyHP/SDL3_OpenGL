@@ -1,9 +1,11 @@
-#version 330 core
+#version 330
+
+
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoords;
 
-noperspective out vec2 TexCoords; // <- disables perspective-correct interpolation
+noperspective out vec2 TexCoords;
 
 uniform mat4 model;
 uniform mat4 view;

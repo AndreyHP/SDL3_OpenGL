@@ -83,6 +83,17 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
+#if defined (GLSL_ES)
+    const char* glsl_version = "#version 300 es";
+    // Set OpenGL attributes
+    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) ||
+        !SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) ||
+        !SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES)) {
+        SDL_Log("Could not set OpenGL attributes: %s", SDL_GetError());
+        SDL_Quit();
+        return SDL_APP_FAILURE;
+    }
+#else
     const char* glsl_version = "#version 130";
     // Set OpenGL attributes
     if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) ||
@@ -92,6 +103,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         SDL_Quit();
         return SDL_APP_FAILURE;
     }
+#endif
+
 
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -143,19 +156,30 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     glEnable(GL_DEPTH_TEST);
 
+    #if defined (GLSL_ES)
     // Compile shaders
-    appState.defaultShader.compile("./glsl/psx.vs", "./glsl/shader.fs");
+    appState.defaultShader.compile("./glsl/web/psx.vs", "./glsl/web/shader.fs");
 
-    appState.singleColorShader.compile("./glsl/stencil_testing.vs", "./glsl/stencil_single_color.fs");
+    appState.singleColorShader.compile("./glsl/web/stencil_testing.vs", "./glsl/web/stencil_single_color.fs");
+    #else
+     // Compile shaders
+    appState.defaultShader.compile("./glsl/desktop/psx.vs", "./glsl/desktop/shader.fs");
 
+    appState.singleColorShader.compile("./glsl/desktop/stencil_testing.vs", "./glsl/desktop/stencil_single_color.fs");
+    #endif
     // activate shader
     appState.defaultShader.use();
     appState.defaultShader.setInt("texture_diffuse1", 0);
 
+    #if defined (GLSL_ES)
     // Initialize framebuffer and screen quad
     framebuffer.Create(w, h, false);
-    screenquad.Create("./glsl/postprocess.vs", "./glsl/postprocess.fs");
-
+    screenquad.Create("./glsl/web/postprocess.vs", "./glsl/web/postprocess.fs");
+    #else
+    // Initialize framebuffer and screen quad
+    framebuffer.Create(w, h, false);
+    screenquad.Create("./glsl/desktop/postprocess.vs", "./glsl/desktop/postprocess.fs");
+    #endif
     return SDL_APP_CONTINUE;
 
 }
@@ -264,12 +288,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+        #if defined (GLSL_ES)
+        //if (appState.wireframe) {
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+       // } else {
+         //   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        //}
+        #else
         if (appState.wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        } else {
+            }else{
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        }
-
+            }
+        #endif
 
         frameCount++;
 
