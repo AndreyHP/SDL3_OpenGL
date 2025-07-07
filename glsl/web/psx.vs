@@ -22,14 +22,19 @@ void main()
     // Convert to NDC (Normalized Device Coordinates)
     vec3 ndc = clipPos.xyz / clipPos.w;
 
+
     // Simulate PS1 screen resolution snapping (e.g., 512x240 grid)
+
     float snapX = 256.0; // Adjust to control horizontal snap strength
     float snapY = 120.0; // Adjust to control vertical snap strength
     ndc.x = round(ndc.x * snapX) / snapX;
     ndc.y = round(ndc.y * snapY) / snapY;
 
+
     // Convert back to clip space
     clipPos = vec4(ndc * clipPos.w, clipPos.w);
 
     gl_Position = clipPos;
+    gl_Position /= gl_Position.w;
+
 }
