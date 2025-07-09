@@ -5,18 +5,20 @@ OUTDIR := debug
 IMGUI_DIR := ./include/imgui
 SRC_DIR := ./src
 
+DEP := -MP -MD
+
 #Linux =========================================================================
-#INCLUDE := -I./include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-#CXX := g++
-#CXXFLAGS := -std=c++23 -O0
-#LINKER := -lGL -lX11 -lpthread -lXrandr -lXi -l:libSDL3.a
+INCLUDE := -I./include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CXX := g++
+CXXFLAGS := -std=c++23 -O0 $(DEP)
+LINKER := -lGL -lX11 -lpthread -lXrandr -lXi -l:libSDL3.a
 #================================================================================
 
 #Windows =========================================================================
-INCLUDE := -I./include -I/usr/local/include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-CXX = x86_64-w64-mingw32-g++
-CXXFLAGS = -std=c++23 -O3 -static-libgcc -static-libstdc++ -Wl,-subsystem,windows
-LINKER = -L./lib -lSDL3 -lopengl32
+#INCLUDE := -I./include -I/usr/local/include -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+#CXX = x86_64-w64-mingw32-g++
+#CXXFLAGS = -std=c++23 -O3 -static-libgcc -static-libstdc++ -Wl,-subsystem,windows
+#LINKER = -L./lib -lSDL3 -lopengl32
 #================================================================================
 
 #HTML5 ==========================================================================
@@ -48,6 +50,7 @@ IMGUI_SRC := \
 
 SRC := $(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*.c) $(IMGUI_SRC)
 OBJ := $(patsubst %.cpp,$(OUTDIR)/%.o,$(patsubst %.c,$(OUTDIR)/%.o,$(SRC)))
+DEPFILES := $(patsubst %.cpp,$(OUTDIR)/%.d,$(patsubst %.c,$(OUTDIR)/%.d,$(SRC)))
 
 # Default target
 all: $(OUTDIR)/$(TARGET)
@@ -76,5 +79,13 @@ run: all
 # Clean target
 clean:
 	rm -rf $(OUTDIR)
+
+
+diff:
+	$(info The status of the repository, and the volume of per-file changes:)
+	@git status
+	@git diff --stat
+
+-include $(DEPFILES)
 
 .PHONY: all clean run
