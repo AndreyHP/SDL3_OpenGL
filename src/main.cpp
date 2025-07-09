@@ -121,7 +121,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
-
     // Create OpenGL context
     appState.glContext = SDL_GL_CreateContext(appState.window);
     if (!appState.glContext) {
@@ -223,27 +222,32 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
         SDL_CaptureMouse(false);
     }
 
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+        switch ((int)event->key.scancode) {
 
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_W) {
-        appState.camera.ProcessKeyboard(FORWARD, delta);
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_S) {
-        appState.camera.ProcessKeyboard(BACKWARD, delta);
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_A) {
-        appState.camera.ProcessKeyboard(LEFT, delta);
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_D) {
-        appState.camera.ProcessKeyboard(RIGHT, delta);
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_F) {
-        appState.wireframe = !appState.wireframe;
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_O) {
-        ourModel.outline = !ourModel.outline;
-    }
-    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_P) {
-        postprecess = !postprecess;
+            case SDL_SCANCODE_W:
+                appState.camera.ProcessKeyboard(FORWARD, delta);
+                break;
+            case SDL_SCANCODE_A:
+                appState.camera.ProcessKeyboard(LEFT, delta);
+                break;
+            case SDL_SCANCODE_S:
+                appState.camera.ProcessKeyboard(BACKWARD, delta);
+                break;
+            case SDL_SCANCODE_D:
+                appState.camera.ProcessKeyboard(RIGHT, delta);
+                break;
+            case SDL_SCANCODE_O:
+                ourModel.outline = !ourModel.outline;
+                break;
+            case SDL_SCANCODE_P:
+                postprecess = !postprecess;
+                break;
+            case SDL_SCANCODE_F:
+                appState.wireframe = !appState.wireframe;
+                break;
+        }
+
     }
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
@@ -297,9 +301,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         #else
         if (appState.wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            }else{
+        }else{
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            }
+        }
         #endif
 
         frameCount++;

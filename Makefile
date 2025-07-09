@@ -57,19 +57,19 @@ all: $(OUTDIR)/$(TARGET)
 
 # Link
 $(OUTDIR)/$(TARGET): $(OBJ) | $(OUTDIR)
-	@$(CXX) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LINKER)
 	$(info Linking: $@)
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LINKER)
 
 # Compile source files to object files
 $(OUTDIR)/%.o: %.cpp | $(OUTDIR)
 	@mkdir -p $(@D)
-	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 	$(info Compiling: $@)
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 $(OUTDIR)/%.o: %.c | $(OUTDIR)
 	@mkdir -p $(@D)
-	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 	$(info Compiling: $@)
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 # Ensure the output directory exists
 $(OUTDIR):
