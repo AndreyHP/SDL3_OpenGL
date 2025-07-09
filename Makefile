@@ -57,20 +57,23 @@ all: $(OUTDIR)/$(TARGET)
 
 # Link
 $(OUTDIR)/$(TARGET): $(OBJ) | $(OUTDIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LINKER)
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LINKER)
+	$(info Linking: $@)
 
 # Compile source files to object files
 $(OUTDIR)/%.o: %.cpp | $(OUTDIR)
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	$(info Compiling: $@)
 
 $(OUTDIR)/%.o: %.c | $(OUTDIR)
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
+	$(info Compiling: $@)
 
 # Ensure the output directory exists
 $(OUTDIR):
-	mkdir -p $(OUTDIR)
+	@mkdir -p $(OUTDIR)
 
 # Run program
 run: all
@@ -78,7 +81,7 @@ run: all
 
 # Clean target
 clean:
-	rm -rf $(OUTDIR)
+	@rm -rf $(OUTDIR)
 
 
 diff:
