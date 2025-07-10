@@ -7,7 +7,6 @@
 #include "../include/tiny_gltf.h"
 #include "./stb/stb_image.h"
 
-
 #include "mesh.h"
 #include "shader.h"
 
@@ -28,6 +27,7 @@ class Model
 public:
     // model data
     glm::mat4 model         = glm::mat4(1.0f);
+    int id;
     bool outline{false};
     vector<Texture> textures_loaded; // stores all the textures loaded so far, optimization to make sure textures aren't loaded more than once.
     vector<Mesh> meshes;
@@ -44,13 +44,27 @@ public:
         loadModel(path);
     }
 
+    void unload(){
+        textures_loaded.clear();
+        meshes.clear();
+    }
+
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)
     {
-        model = glm::mat4(1.0f);
-        for(unsigned int i = 0; i < meshes.size(); i++){
-            meshes[i].Draw(shader);
+        if (modelloaded){
+           model = glm::mat4(1.0f);
+            for(unsigned int i = 0; i < meshes.size(); i++){
+                meshes[i].Draw(shader);
+            }
+        }else{
+            static bool printed{false};
+            if (!printed) {
+            std::cout << "Model_" << id <<  " not loaded" << std::endl;
+            printed = true;
+            }
         }
+
     }
 
     void Translate(float x, float y, float z){
@@ -99,6 +113,8 @@ public:
     }
 
 private:
+    bool modelloaded{false};
+    string name;
     // loads a model with tinygltf from file and stores the resulting meshes in the meshes vector
     void loadModel(string const &path)
     {
@@ -136,6 +152,11 @@ private:
                 processNode(nodeIndex, model);
             }
         }
+
+        name = path.substr(path.find_last_of('/') + 1);
+
+        std::cout << "Model_" << id << "_" << name  << " loaded" << std::endl;
+        modelloaded = true;
     }
 
     // processes a node recursively

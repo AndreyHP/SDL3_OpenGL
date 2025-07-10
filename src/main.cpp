@@ -5,6 +5,9 @@
 #include "../include/framebuffer.h"
 #include "../include/camera.h"
 #include "../include/model.h"
+#include <string>
+#include <vector>
+#include <iostream>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
@@ -37,7 +40,8 @@ bool  captureMouse{false};
 bool  modelLoaded{false};
 bool  showModel{false};
 bool  showOutline{false};
-Model ourModel;
+
+vector<Model> models;
 
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
@@ -179,6 +183,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     framebuffer.Create(w, h, false);
     screenquad.Create("./glsl/desktop/Vert_postprocess.glsl", "./glsl/desktop/Frag_postprocess.glsl");
     #endif
+
+    for (int i = 0; i < 3; i++) {
+        Model newmodel;
+        newmodel.id = i;
+        models.push_back(newmodel);
+    }
+
+
     return SDL_APP_CONTINUE;
 
 }
@@ -238,7 +250,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
                 appState.camera.ProcessKeyboard(RIGHT, delta);
                 break;
             case SDL_SCANCODE_O:
-                ourModel.outline = !ourModel.outline;
+                models[0].outline = !models[0].outline;
                 break;
             case SDL_SCANCODE_P:
                 postprecess = !postprecess;
@@ -328,17 +340,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             SDL_Delay(FRAME_TIME - frameTime);
         }
 
-        if (ourModel.outline){
-            ourModel.OutlineInit(appState.singleColorShader);
-        }
-
 
         // view/projection transformations
         projection = glm::perspective(glm::radians(appState.camera.Zoom), (float)appState.SCR_WIDTH / (float)appState.SCR_HEIGHT, 0.1f, 100.0f);
         view = appState.camera.GetViewMatrix();
 
 
-        if (ourModel.outline){
+        for (int i = 0; i < 3; i++) {
+            if (models[i].outline){
+            models[i].OutlineInit(appState.singleColorShader);
+        }
+
+
+        if (models[i].outline){
             appState.singleColorShader.setMat4("view", view);
             appState.singleColorShader.setMat4("projection", projection);
 
@@ -353,34 +367,35 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
         // render the loaded model
         if (showModel){
-            ourModel.Draw(appState.defaultShader);
+            models[i].Draw(appState.defaultShader);
         }
 
         float newAngle = rotateModel * now;
 
-        ourModel.Translate(0.0f, YTranslate, ZTranslate);
-        ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
-        ourModel.Scale(scale, scale, scale);
-        appState.defaultShader.setMat4("model", ourModel.model);
+        models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
+        models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
+        models[i].Scale(scale, scale, scale);
+        appState.defaultShader.setMat4("model", models[i].model);
 
         if (modelLoaded){
-            ourModel.textures_loaded.clear();
-            ourModel.meshes.clear();
-
-            ourModel.Load(inputBuffer);
-            modelLoaded = false;
-            showModel = true;
+            for (int i = 0; i < 3; i++) {
+             models[i].Load(inputBuffer);
+            }
+             modelLoaded = false;
+             showModel = true;
         }
 
 
-        if (ourModel.outline){
+        if (models[i].outline){
 
-            ourModel.drawOutline(appState.singleColorShader);
+            models[i].drawOutline(appState.singleColorShader);
 
-            ourModel.Translate(0.0f, YTranslate, ZTranslate);
-            ourModel.Rotate(0.0f, 0.5f, 0.0f, newAngle);
-            ourModel.Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
+            models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
+            models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
+            models[i].Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
             }
+        }
+
 
         if (postprecess){
         // Render framebuffer to screen with post-processing
