@@ -29,7 +29,6 @@ LINKER := -lGL -lX11 -lpthread -lXrandr -lXi -l:libSDL3.a
 #================================================================================
 
 
-
 #-sASYNCIFY
 
 # -g   Valgrind
