@@ -75,7 +75,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
 
     // Set application metadata
-    SDL_SetAppMetadata("3D Renderer", "1.0", "com.example.renderer");
+    SDL_SetAppMetadata("3D Renderer", "1.0", "com.andrey.renderer");
 
     // Initialize SDL
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -114,7 +114,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
 
     // Create window
-    appState.window = SDL_CreateWindow("Example", appState.SCR_WIDTH, appState.SCR_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    appState.window = SDL_CreateWindow("3d Render", appState.SCR_WIDTH, appState.SCR_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!appState.window) {
         SDL_Log("Could not create Window: %s", SDL_GetError());
         SDL_Quit();
@@ -157,14 +157,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     #if defined (GLSL_ES)
     // Compile shaders
-    appState.defaultShader.compile("./glsl/web/psx.vs", "./glsl/web/shader.fs");
+    appState.defaultShader.compile("./glsl/web/Vert_psx.glsl", "./glsl/web/Frag_shader.glsl");
 
-    appState.singleColorShader.compile("./glsl/web/stencil_testing.vs", "./glsl/web/stencil_single_color.fs");
+    appState.singleColorShader.compile("./glsl/web/Vert_stencil_testing.glsl", "./glsl/web/Frag_stencil_single_color.glsl");
     #else
      // Compile shaders
-    appState.defaultShader.compile("./glsl/desktop/psx.vs", "./glsl/desktop/shader.fs");
+    appState.defaultShader.compile("./glsl/desktop/Vert_psx.glsl", "./glsl/desktop/Frag_shader.glsl");
 
-    appState.singleColorShader.compile("./glsl/desktop/stencil_testing.vs", "./glsl/desktop/stencil_single_color.fs");
+    appState.singleColorShader.compile("./glsl/desktop/Vert_stencil_testing.glsl", "./glsl/desktop/Frag_stencil_single_color.glsl");
     #endif
     // activate shader
     appState.defaultShader.use();
@@ -173,11 +173,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     #if defined (GLSL_ES)
     // Initialize framebuffer and screen quad
     framebuffer.Create(w, h, false);
-    screenquad.Create("./glsl/web/postprocess.vs", "./glsl/web/postprocess.fs");
+    screenquad.Create("./glsl/web/Vert_postprocess.glsl", "./glsl/web/Frag_postprocess.glsl");
     #else
     // Initialize framebuffer and screen quad
     framebuffer.Create(w, h, false);
-    screenquad.Create("./glsl/desktop/postprocess.vs", "./glsl/desktop/postprocess.fs");
+    screenquad.Create("./glsl/desktop/Vert_postprocess.glsl", "./glsl/desktop/Frag_postprocess.glsl");
     #endif
     return SDL_APP_CONTINUE;
 
