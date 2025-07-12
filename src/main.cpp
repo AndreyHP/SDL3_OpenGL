@@ -42,6 +42,8 @@ bool  showModel{false};
 bool  showOutline{false};
 
 vector<Model> models;
+std::vector<std::string> items;
+int selectedItem = -1; // To keep track of the selected item
 
 glm::mat4 model         = glm::mat4(1.0f);
 glm::mat4 view          = glm::mat4(1.0f);
@@ -184,12 +186,18 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     screenquad.Create("./glsl/desktop/Vert_postprocess.glsl", "./glsl/desktop/Frag_postprocess.glsl");
     #endif
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 1; i++) {
         Model newmodel;
         newmodel.id = i;
         models.push_back(newmodel);
     }
 
+    //  list of models
+     items = {
+        "./assets/cube/cube.gltf",
+        "./assets/ironman/scene.gltf",
+        "./assets/KokiriForest/scene.gltf",
+         };
 
     return SDL_APP_CONTINUE;
 
@@ -284,9 +292,23 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);
             ImGui::SliderFloat("YTranslate", &YTranslate, -20.0f, 20.0f);
             ImGui::SliderFloat("ZTranslate", &ZTranslate, -20.0f, 20.0f);
-            ImGui::InputText("Model path", inputBuffer, sizeof(inputBuffer));
+
+            // Models list
+            ImGui::Text("Models:");
+            if (ImGui::ListBox("Items", &selectedItem,
+            [](void* data, int idx, const char** out_text) {
+                *out_text = static_cast<std::vector<std::string>*>(data)->at(idx).c_str();
+                return true;
+            },
+            static_cast<void*>(&items), items.size())) {
+            // Update inputBuffer with the selected item
+            if (selectedItem >= 0 && selectedItem < items.size()) {
+                strncpy(inputBuffer, items[selectedItem].c_str(), sizeof(inputBuffer) - 1);
+                inputBuffer[sizeof(inputBuffer) - 1] = '\0'; // Ensure null-termination
+                }
+            }
             // Create a button
-            if (ImGui::Button("Submit")) {
+            if (ImGui::Button("Load")) {
                 // Action to perform when the button is pressed
                 // For example, print the input text to the console
                 printf("Input: %s\n", inputBuffer);
@@ -346,7 +368,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         view = appState.camera.GetViewMatrix();
 
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < models.size(); i++) {
             if (models[i].outline){
             models[i].OutlineInit(appState.singleColorShader);
         }
@@ -370,15 +392,15 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             models[i].Draw(appState.defaultShader);
         }
 
-        float newAngle = rotateModel * now;
+        //float newAngle = rotateModel * now;
 
         models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
-        models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
+        //models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
         models[i].Scale(scale, scale, scale);
         appState.defaultShader.setMat4("model", models[i].model);
 
         if (modelLoaded){
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < models.size(); i++) {
              models[i].Load(inputBuffer);
             }
              modelLoaded = false;
@@ -391,7 +413,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
             models[i].drawOutline(appState.singleColorShader);
 
             models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
-            models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
+            //models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
             models[i].Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
             }
         }

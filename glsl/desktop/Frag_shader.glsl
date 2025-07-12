@@ -4,7 +4,7 @@
 
 out vec4 FragColor;
 
-noperspective in vec2 TexCoords;
+in vec2 TexCoords;
 
 vec4 fog;
 float near = 0.1;
