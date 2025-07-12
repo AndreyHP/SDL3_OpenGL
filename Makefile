@@ -28,7 +28,6 @@ LINKER := -lGL -lX11 -lpthread -lXrandr -lXi -l:libSDL3.a
 #LINKER =  -sUSE_SDL=3 -s MAX_WEBGL_VERSION=2 --preload-file ./assets --preload-file ./glsl
 #================================================================================
 
-
 #-sASYNCIFY
 
 # -g   Valgrind
