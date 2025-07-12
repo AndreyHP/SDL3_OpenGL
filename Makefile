@@ -36,7 +36,6 @@ LINKER := -lGL -lX11 -lpthread -lXrandr -lXi -l:libSDL3.a
 # -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion Extra warnings
 # -Werror Treat warnings as errors
 
-
 IMGUI_SRC := \
     $(IMGUI_DIR)/imgui.cpp \
     $(IMGUI_DIR)/imgui_demo.cpp \
