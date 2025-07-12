@@ -36,6 +36,5 @@ void main()
     clipPos = vec4(ndc * clipPos.w, clipPos.w);
 
     gl_Position = clipPos;
-    gl_Position /= gl_Position.w;
 
 }
