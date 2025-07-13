@@ -45,9 +45,13 @@ public:
     }
 
     void unload(){
-        textures_loaded.clear();
+        for(unsigned int i = 0; i < meshes.size(); i++){
+                meshes[i].Delete();
+            }
         meshes.clear();
     }
+
+
 
     // draws the model, and thus all its meshes
     void Draw(Shader &shader)

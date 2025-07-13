@@ -41,6 +41,8 @@ bool  modelLoaded{false};
 bool  showModel{false};
 bool  showOutline{false};
 
+glm::vec4 fogColor;
+
 vector<Model> models;
 std::vector<std::string> items;
 int selectedItem = -1; // To keep track of the selected item
@@ -186,7 +188,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     screenquad.Create("./glsl/desktop/Vert_postprocess.glsl", "./glsl/desktop/Frag_postprocess.glsl");
     #endif
 
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 5; i++) {
         Model newmodel;
         newmodel.id = i;
         models.push_back(newmodel);
@@ -266,6 +268,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
             case SDL_SCANCODE_F:
                 appState.wireframe = !appState.wireframe;
                 break;
+            case SDL_SCANCODE_U:
+                for (int i = 0; i < models.size(); i++) {
+                    models[i].unload();
+                }
+                break;
         }
 
     }
@@ -323,8 +330,13 @@ SDL_AppResult SDL_AppIterate(void *appstate)
         framebuffer.Bind();
         }
         // Render
+        fogColor.r = clear_color.x;
+        fogColor.g = clear_color.y;
+        fogColor.b = clear_color.z;
+        fogColor.a = clear_color.w;
         glClearColor(clear_color.x,clear_color.y,clear_color.z,clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        appState.defaultShader.setVec4("fogColor",fogColor.r,fogColor.g,fogColor.b,fogColor.a);
 
         #if defined (GLSL_ES)
         //if (appState.wireframe) {
@@ -401,6 +413,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
         if (modelLoaded){
             for (int i = 0; i < models.size(); i++) {
+             models[i].unload();
              models[i].Load(inputBuffer);
             }
              modelLoaded = false;

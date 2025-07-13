@@ -11,6 +11,8 @@ float near = 0.1;
 float far  = 20.0;
 
 uniform sampler2D texture_diffuse1;
+uniform vec4 fogColor;
+
 
 float LinearizeDepth(float depth)
 {
@@ -21,14 +23,12 @@ float LinearizeDepth(float depth)
 
 void main()
 {
-
-    
     float depth = LinearizeDepth(gl_FragCoord.z) / far;
 
-    
+
     vec4 baseColor = texture(texture_diffuse1, TexCoords);
     baseColor.rgb = floor(baseColor.rgb * 16.0) / 16.0; // Reduce to 16 colors
     fog = vec4(vec3(depth), 1.0);
 
-    FragColor = mix(baseColor, vec4(1.0), fog);
+    FragColor = mix(baseColor, vec4(fogColor), fog);
 }
