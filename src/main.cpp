@@ -188,7 +188,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     screenquad.Create("./glsl/desktop/Vert_postprocess.glsl", "./glsl/desktop/Frag_postprocess.glsl");
     #endif
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 1; i++) {
         Model newmodel;
         newmodel.id = i;
         models.push_back(newmodel);
