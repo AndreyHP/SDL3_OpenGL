@@ -1,4 +1,5 @@
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
+#include <SDL3/SDL_dialog.h>
 #include "../include/glad/glad.h"
 #include "../include/shader.h"
 #include "../include/stb/stb_image.h"
@@ -26,6 +27,9 @@
 
 AppState appState;
 
+static const SDL_DialogFileFilter filters[] = {
+    { "GLTF",   "gltf;glb" }
+};
 
 const int TARGET_FPS = 60;
 const int FRAME_TIME = 1000 / TARGET_FPS; // Frame time in milliseconds
@@ -65,19 +69,21 @@ float YTranslate = 0.0f;
 // Variables for FPS calculation
 Uint32 frameCount = 0;
 Uint32 startTime = SDL_GetTicks();
-Uint32 previousFrameTime = startTime; // Initialize with start time
+Uint32 previousFrameTime = startTime;
 
-static char inputBuffer[256]; // Buffer for the text input
+static char inputBuffer[256];
 
 bool postprecess{false};
 Framebuffer framebuffer;
 ScreenQuad screenquad;
 
+
+
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
 void processEvents(SDL_Event *event);
 void SetupImGUI(float mainScale, const char* glsl_version);
-
+void file_dialog_callback(void* userdata, const char* const* filelist, int filter);
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -194,12 +200,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         models.push_back(newmodel);
     }
 
-    //  list of models
-     items = {
-        "./assets/cube/cube.gltf",
-        "./assets/ironman/scene.gltf",
-        "./assets/KokiriForest/scene.gltf",
-         };
 
     return SDL_APP_CONTINUE;
 
@@ -314,11 +314,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
                 inputBuffer[sizeof(inputBuffer) - 1] = '\0'; // Ensure null-termination
                 }
             }
+            if (ImGui::Button("Open")){
+                SDL_ShowOpenFileDialog(file_dialog_callback, NULL, appState.window, filters, 1, NULL, false);
+            }
             // Create a button
             if (ImGui::Button("Load")) {
                 // Action to perform when the button is pressed
                 // For example, print the input text to the console
-                printf("Input: %s\n", inputBuffer);
+                std::cout << "Imput: " << inputBuffer << std::endl;
                 modelLoaded = true;
             }
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / gio->Framerate, gio->Framerate);
@@ -532,4 +535,34 @@ void SetupImGUI(float mainScale, const char* glsl_version) {
     io.ConfigDpiScaleViewports = true;      // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
     gio = &io;
+}
+
+
+void file_dialog_callback(void* userdata, const char* const* filelist, int filter) {
+   if (!filelist) {
+        SDL_Log("An error occured: %s", SDL_GetError());
+        return;
+    } else if (!*filelist) {
+        SDL_Log("The user did not select any file.");
+        SDL_Log("Most likely, the dialog was canceled.");
+        return;
+    }
+
+    string s = "dasd";
+    s = *filelist;
+
+     // Ensure the string fits in the char array
+    if (s.size() < sizeof(inputBuffer)) {
+        // Copy the string to the char array
+        strncpy(inputBuffer, s.c_str(), sizeof(inputBuffer) - 1);
+        // Ensure null termination
+        inputBuffer[sizeof(inputBuffer) - 1] = '\0';
+    } else {
+        std::cerr << "String is too long to fit in char array." << std::endl;
+    }
+
+    items.push_back(s);
+
+    //std::cout <<inputBuffer << std::endl;
+
 }
