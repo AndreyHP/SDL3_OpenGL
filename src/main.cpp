@@ -1,4 +1,8 @@
 #include "../include/core.h"
+#ifdef __EMSCRIPTEN__
+#include "../include/emscripten_mainloop_stub.h"
+#endif
+
 
 AppState *appstate = core::GetAppState();
 
@@ -45,11 +49,19 @@ void teste(){
 int main(){
 
  core::on_init();
+ #ifdef __EMSCRIPTEN__
+    EMSCRIPTEN_MAINLOOP_BEGIN
+#else
+    while (!core::appDone())
+#endif
 
- while (!core::appDone()) {
+  {
     core::on_event(&teste);
     core::on_update();
     }
+#ifdef __EMSCRIPTEN__
+    EMSCRIPTEN_MAINLOOP_END;
+#endif
 
  core::on_quit();
 

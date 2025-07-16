@@ -212,6 +212,16 @@ int on_init() {
         models.push_back(newmodel);
     }
 
+#ifdef __EMSCRIPTEN__
+    //  list of models
+    items = {
+    "./assets/cube/cube.gltf",
+    "./assets/ironman/scene.gltf",
+    "./assets/KokiriForest/scene.gltf",
+        };
+#endif
+
+
     return 0;
 }
 
@@ -299,8 +309,11 @@ int on_update() {
         }
     }
     if (ImGui::Button("Open")) {
-        SDL_ShowOpenFileDialog(file_dialog_callback, NULL, appState.window, filters,
-                            1, NULL, false);
+        #ifdef __EMSCRIPTEN__
+        //SDL_ShowOpenFileDialog(file_dialog_callback, NULL, appState.window, filters,1, NULL, false);
+        #else
+        SDL_ShowOpenFileDialog(file_dialog_callback, NULL, appState.window, filters,1, NULL, false);
+        #endif
     }
     // Create a button
     if (ImGui::Button("Load")) {
@@ -549,6 +562,7 @@ void file_dialog_callback(void *userdata, const char *const *filelist,
     } else {
         std::cerr << "String is too long to fit in char array." << std::endl;
     }
+
 
     items.push_back(s);
 
