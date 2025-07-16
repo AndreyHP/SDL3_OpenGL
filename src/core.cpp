@@ -25,6 +25,7 @@
 #include <vector>
 
 AppState appState;
+SDL_Event event;
 
 static const SDL_DialogFileFilter filters[] = {{"GLTF", "gltf;glb"}};
 
@@ -78,6 +79,9 @@ bool quitApp{false};
 
 namespace core {
 
+AppState* GetAppState();
+SDL_Event* GetEvent();
+float GetDelta();
 bool appDone();
 void mouse_callback(double xpos, double ypos);
 void scroll_callback(double xoffset, double yoffset);
@@ -211,11 +215,7 @@ int on_init() {
     return 0;
 }
 
-int on_event() {
-
-    SDL_Event event;
-
-    const double delta = deltaTime;
+int on_event(void(*func)()) {
 
     while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL3_ProcessEvent(&event);
@@ -253,37 +253,8 @@ int on_event() {
         SDL_CaptureMouse(false);
         }
 
-        if (event.type == SDL_EVENT_KEY_DOWN) {
-        switch ((int)event.key.scancode) {
+        func();
 
-        case SDL_SCANCODE_W:
-            appState.camera.ProcessKeyboard(FORWARD, delta);
-            break;
-        case SDL_SCANCODE_A:
-            appState.camera.ProcessKeyboard(LEFT, delta);
-            break;
-        case SDL_SCANCODE_S:
-            appState.camera.ProcessKeyboard(BACKWARD, delta);
-            break;
-        case SDL_SCANCODE_D:
-            appState.camera.ProcessKeyboard(RIGHT, delta);
-            break;
-        case SDL_SCANCODE_O:
-            models[0].outline = !models[0].outline;
-            break;
-        case SDL_SCANCODE_P:
-            postprecess = !postprecess;
-            break;
-        case SDL_SCANCODE_F:
-            appState.wireframe = !appState.wireframe;
-            break;
-        case SDL_SCANCODE_U:
-            for (int i = 0; i < models.size(); i++) {
-            models[i].unload();
-            }
-            break;
-        }
-        }
     }
 
     return 0;
@@ -591,5 +562,17 @@ bool appDone() {
     }
     return v;
     };
+
+SDL_Event* GetEvent(){
+    return &event;
+};
+
+float GetDelta(){
+    return deltaTime;
+};
+
+AppState* GetAppState(){
+    return &appState;
+};
 
 }; // namespace core

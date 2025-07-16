@@ -1,17 +1,20 @@
 #pragma once
-
+#include <SDL3/SDL.h>
 #include "../include/core.h"
-#include "../include/imgui/imgui.h"
-#include "../include/imgui/backends/imgui_impl_sdl3.h"
-#include "../include/imgui/backends/imgui_impl_opengl3.h"
-
+#include "../include/appstate.h"
 
 namespace core {
 
+
+    typedef SDL_Event Event;
+
+    float GetDelta();
+    SDL_Event* GetEvent();
     bool appDone();
     int on_init();
-    int on_event();
+    int on_event(void(*func)());
     int on_update();
     void on_quit();
+    AppState* GetAppState();
 
 }
