@@ -11,10 +11,11 @@ namespace core {
     float GetDelta();
     SDL_Event* GetEvent();
     bool appDone();
-    int on_init();
+    int on_init(void(*func)());
     int on_event(void(*func)());
-    int on_update();
+    int on_update(void(*func)());
     void on_quit();
     AppState* GetAppState();
+
 
 }

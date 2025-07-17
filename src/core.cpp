@@ -39,19 +39,16 @@ float Zdistance{-5.0f};
 float avgFPS = {0.0f};
 float deltaTime = {0.0f};
 bool captureMouse{false};
-bool modelLoaded{false};
-bool showModel{false};
 bool showOutline{false};
 
 glm::vec4 fogColor;
 
-vector<Model> models;
+
 std::vector<std::string> items;
 int selectedItem = -1; // To keep track of the selected item
 
 glm::mat4 model = glm::mat4(1.0f);
-glm::mat4 view = glm::mat4(1.0f);
-glm::mat4 projection = glm::mat4(1.0f);
+
 
 ImGuiIO *gio;
 
@@ -68,8 +65,6 @@ float YTranslate = 0.0f;
 Uint32 frameCount = 0;
 Uint32 startTime = SDL_GetTicks();
 Uint32 previousFrameTime = startTime;
-
-static char inputBuffer[256];
 
 bool postprecess{false};
 Framebuffer framebuffer;
@@ -89,7 +84,16 @@ void SetupImGUI(float mainScale, const char *glsl_version);
 void file_dialog_callback(void *userdata, const char *const *filelist,
                           int filter);
 
-int on_init() {
+
+
+void getViewportSize(int& width, int& height) {
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    width = viewport[2];
+    height = viewport[3];
+}
+
+int on_init(void(*func)()) {
     // Set application metadata
     SDL_SetAppMetadata("3D Renderer", "1.0", "com.andrey.renderer");
 
@@ -206,11 +210,7 @@ int on_init() {
                         "./glsl/desktop/Frag_postprocess.glsl");
     #endif
 
-    for (int i = 0; i < 1; i++) {
-        Model newmodel;
-        newmodel.id = i;
-        models.push_back(newmodel);
-    }
+
 
 #ifdef __EMSCRIPTEN__
     //  list of models
@@ -221,6 +221,7 @@ int on_init() {
         };
 #endif
 
+    func();
 
     return 0;
 }
@@ -242,6 +243,8 @@ int on_event(void(*func)()) {
 
         if (event.type == SDL_EVENT_WINDOW_RESIZED) {
         SDL_GetWindowSize(appState.window, &w, &h);
+        //int vw, vh;
+        //getViewportSize(vw, vh);
         glViewport(0, 0, w, h);
         }
 
@@ -270,7 +273,7 @@ int on_event(void(*func)()) {
     return 0;
 }
 
-int on_update() {
+int on_update(void(*func)()) {
 
     // create transformations
     Uint32 frameStart = SDL_GetTicks(); // Start time for the current frame
@@ -303,9 +306,9 @@ int on_update() {
             static_cast<void *>(&items), items.size())) {
         // Update inputBuffer with the selected item
         if (selectedItem >= 0 && selectedItem < items.size()) {
-        strncpy(inputBuffer, items[selectedItem].c_str(),
-                sizeof(inputBuffer) - 1);
-        inputBuffer[sizeof(inputBuffer) - 1] = '\0'; // Ensure null-termination
+        strncpy(appState.inputBuffer, items[selectedItem].c_str(),
+                sizeof(appState.inputBuffer) - 1);
+        appState.inputBuffer[sizeof(appState.inputBuffer) - 1] = '\0'; // Ensure null-termination
         }
     }
     if (ImGui::Button("Open")) {
@@ -319,8 +322,8 @@ int on_update() {
     if (ImGui::Button("Load")) {
         // Action to perform when the button is pressed
         // For example, print the input text to the console
-        std::cout << "Imput: " << inputBuffer << std::endl;
-        modelLoaded = true;
+        std::cout << "Imput: " << appState.inputBuffer << std::endl;
+        appState.modelLoaded = true;
     }
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                 1000.0f / gio->Framerate, gio->Framerate);
@@ -377,60 +380,10 @@ int on_update() {
         SDL_Delay(FRAME_TIME - frameTime);
     }
 
-    // view/projection transformations
-    projection = glm::perspective(
-        glm::radians(appState.camera.Zoom),
-        (float)appState.SCR_WIDTH / (float)appState.SCR_HEIGHT, 0.1f, 100.0f);
-    view = appState.camera.GetViewMatrix();
 
-    for (int i = 0; i < models.size(); i++) {
-        if (models[i].outline) {
-        models[i].OutlineInit(appState.singleColorShader);
-        }
 
-        if (models[i].outline) {
-        appState.singleColorShader.setMat4("view", view);
-        appState.singleColorShader.setMat4("projection", projection);
+    func();
 
-        appState.defaultShader.use();
-        appState.defaultShader.setMat4("projection", projection);
-        appState.defaultShader.setMat4("view", view);
-        } else {
-        appState.defaultShader.use();
-        appState.defaultShader.setMat4("projection", projection);
-        appState.defaultShader.setMat4("view", view);
-        }
-
-        // render the loaded model
-        if (showModel) {
-        models[i].Draw(appState.defaultShader);
-        }
-
-        // float newAngle = rotateModel * now;
-
-        models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
-        // models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
-        models[i].Scale(scale, scale, scale);
-        appState.defaultShader.setMat4("model", models[i].model);
-
-        if (modelLoaded) {
-        for (int i = 0; i < models.size(); i++) {
-            models[i].unload();
-            models[i].Load(inputBuffer);
-        }
-        modelLoaded = false;
-        showModel = true;
-        }
-
-        if (models[i].outline) {
-
-        models[i].drawOutline(appState.singleColorShader);
-
-        models[i].Translate(0.0f + i * 2.0f, YTranslate, ZTranslate);
-        // models[i].Rotate(0.0f, 0.5f, 0.0f, newAngle);
-        models[i].Scale(scale + 0.02f, scale + 0.02f, scale + 0.02f);
-        }
-    }
 
     if (postprecess) {
         // Render framebuffer to screen with post-processing
@@ -554,11 +507,11 @@ void file_dialog_callback(void *userdata, const char *const *filelist,
     s = *filelist;
 
     // Ensure the string fits in the char array
-    if (s.size() < sizeof(inputBuffer)) {
+    if (s.size() < sizeof(appState.inputBuffer)) {
         // Copy the string to the char array
-        strncpy(inputBuffer, s.c_str(), sizeof(inputBuffer) - 1);
+        strncpy(appState.inputBuffer, s.c_str(), sizeof(appState.inputBuffer) - 1);
         // Ensure null termination
-        inputBuffer[sizeof(inputBuffer) - 1] = '\0';
+        appState.inputBuffer[sizeof(appState.inputBuffer) - 1] = '\0';
     } else {
         std::cerr << "String is too long to fit in char array." << std::endl;
     }
